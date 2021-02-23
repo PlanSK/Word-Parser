@@ -5,13 +5,7 @@ import datetime
 from loguru import logger
 import docx
 
-SPACE_SYMBOL = ' '
-SPACE_QUANTITY = 3
-STR_LENGTH = 65
-PARAGRAPH_INDENT = 4
-INDENT = SPACE_SYMBOL * SPACE_QUANTITY
-check_status = False
-title = ''
+from variables import *
 
 
 def read_file(file: str) -> list:
@@ -30,7 +24,6 @@ def file_lines_compile(file_line: list) -> list:
     first_block = False
 
     for line in file_line:
-        replacing_dict = {'«': '"', '»': '"', '\t': INDENT}
         for char, replacing_char in replacing_dict.items():
             line = line.replace(char, replacing_char)
         line = line.strip()
@@ -38,7 +31,7 @@ def file_lines_compile(file_line: list) -> list:
             if counter >= 2 and first_block:
                 resulting_list.append(temp_list.copy())
                 temp_list.clear()
-            if 'From' in line[:3]:
+            if from_str in line[:3]:
                 first_block = True
             temp_list.append(line)
             counter = 0
@@ -46,7 +39,7 @@ def file_lines_compile(file_line: list) -> list:
             counter += 1
     resulting_list.append(temp_list)
 
-    while 'Director' not in resulting_list[-1][0][:10]:
+    while director_str not in resulting_list[-1][0][:10]:
         resulting_list[-2].extend(resulting_list[-1])
         resulting_list.pop()
 
@@ -68,12 +61,6 @@ def format_string(line: str, length=STR_LENGTH) -> str:
 
 
 def replacing_phrases(input_string: str) -> str:
-    abbreviations = {
-        'department AWX': 'dAVX',
-        'part': 'P',
-        'administration': 'ADM'
-    }
-
     for key, value in abbreviations.items():
         if key in input_string:
             input_string = input_string.replace(key, value)
@@ -90,11 +77,11 @@ def header(header_list: list, number: int) -> list:
     # Declassifying define
     declassify = re.split(r'\s{2,}', header_list[2])[1]
     list_item = ''
-    if declassify == 'Confidencial':
+    if declassify == confident_str:
         list_item = re.search(r'\(\w+\.\s?\d\.\d+(.*)\)$', header_list[3]).group(0)
         list_item = SPACE_SYMBOL * (STR_LENGTH - len(list_item)) + list_item
-    elif declassify == 'For internal use':
-        declassify = 'FIU'
+    elif declassify == non_confident_str:
+        declassify = non_confident_short_str
 
     # compiling sender line information
     from_address, extended_address = header_list[5].split(',')
@@ -115,7 +102,7 @@ def header(header_list: list, number: int) -> list:
     number_of_part = from_address[-4:]
     if check_status:
         dot_symbol = '.'
-    header_string = f'{from_address}{INDENT}NUM{dot_symbol}{SPACE_SYMBOL}{number}{INDENT}{declassify}{urgency}'
+    header_string = f'{from_address}{INDENT}{number_abbr}{dot_symbol}{SPACE_SYMBOL}{number}{INDENT}{declassify}{urgency}'
 
     return [header_string, list_item, number_of_part]
 
@@ -124,7 +111,7 @@ def address_where(recipient: list) -> list:
     address_list = list()
     quantity_spaces = 0
 
-    if 'Куда' in recipient[0]:
+    if where_str in recipient[0]:
         recipient[0] = recipient[0][11:].strip()
     if not recipient[0]:
         recipient.pop(0)
@@ -141,7 +128,7 @@ def address_where(recipient: list) -> list:
             if len(city + where) > STR_LENGTH:
                 surplus = where.split().pop()
                 where = SPACE_SYMBOL.join(where.split()[:-1])
-                surplus = 1 * len(city) + surplus
+                surplus = SPACE_SYMBOL * len(city) + surplus
 
             address_list.append(city + where)
             if surplus:
@@ -154,18 +141,18 @@ def address_where(recipient: list) -> list:
                     for element in string[3:].split(',')
                 ]
                 from_string = addressee_string[0]
-                quantity_spaces = len(from_string) + 3
+                quantity_spaces = len(from_string) + SPACE_QUANTITY
                 address_list.append(f'{from_string}{INDENT}{addressee_string[1]}')
             elif 'г.' in string[:3] and re.search(r'\w{2,}\.', string):
                 addressee_string = [element.strip() for element in string[3:].split('. ')]
                 from_string = addressee_string[0]
-                quantity_spaces = len(from_string) + 3
+                quantity_spaces = len(from_string) + SPACE_QUANTITY
                 address_list.append(f'{from_string}{INDENT}{addressee_string[1]}')
             elif len(re.split(r'\s{3,}', string)) > 1:
                 for tab_string in re.split(r'\s{3,}', string):
-                    address_list.append(f'{1 * quantity_spaces}{tab_string}')
+                    address_list.append(f'{SPACE_SYMBOL * quantity_spaces}{tab_string}')
             else:
-                address_list.append(f'{1 * quantity_spaces}{string}')
+                address_list.append(f'{SPACE_SYMBOL * quantity_spaces}{string}')
 
     return address_list
 
@@ -204,8 +191,8 @@ def footer(file_line: list, number: int, number_of_part: str) -> list:
     check_symbol = ''
     today = datetime.date.today().strftime("%d.%m.%Y")
     if check_status:
-        check_symbol = '/P'
-    prefix = f'NUM {number_of_part}/{number}{check_symbol}{INDENT}'
+        check_symbol = '/П'
+    prefix = f'{number_abbr}{SPACE_SYMBOL}{number_of_part}/{number}{check_symbol}{INDENT}'
     final_result.append(f'{prefix}{file_line[0]}')
     final_result.append(f'{SPACE_SYMBOL * len(prefix)}{file_line[1]}')
     rank, name, sub_name = file_line[2].split()
@@ -219,13 +206,13 @@ def footer(file_line: list, number: int, number_of_part: str) -> list:
 
 def assignee(file_line: list) -> str:
     for s in file_line:
-        if 'Member:' in s:
+        if member_str in s:
             return s
 
 
 if __name__ == "__main__":
     # Default values
-    file_name = ''
+    file_name = f'{WORK_DIR}1.docx'
     message_number = 0
     check_status = False
 
@@ -254,7 +241,7 @@ if __name__ == "__main__":
 
     header_result = header(file_parts[0], message_number)
 
-    with open(f'files/{message_number}.atl', 'w', encoding='cp866') as out_file:
+    with open(f'{WORK_DIR}{message_number}.atl', 'w', encoding='cp866') as out_file:
         print(*header_result[:2], sep='\n', file=out_file)
         print('\n', file=out_file)
         print(*address_where(file_parts[1]), sep='\n', file=out_file)
