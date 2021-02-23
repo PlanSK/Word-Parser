@@ -5,12 +5,11 @@ import datetime
 from loguru import logger
 import docx
 
-space_symbol = ' '
-space_quantity = 3
-str_length = 65
-str_on_page = 60
-paragraph_indent = 5
-indent = space_symbol * space_quantity
+SPACE_SYMBOL = ' '
+SPACE_QUANTITY = 3
+STR_LENGTH = 65
+PARAGRAPH_INDENT = 4
+INDENT = SPACE_SYMBOL * SPACE_QUANTITY
 check_status = False
 title = ''
 
@@ -31,7 +30,7 @@ def file_lines_compile(file_line: list) -> list:
     first_block = False
 
     for line in file_line:
-        replacing_dict = {'«': '"', '»': '"', '\t': '   '}
+        replacing_dict = {'«': '"', '»': '"', '\t': INDENT}
         for char, replacing_char in replacing_dict.items():
             line = line.replace(char, replacing_char)
         line = line.strip()
@@ -54,18 +53,18 @@ def file_lines_compile(file_line: list) -> list:
     return resulting_list
 
 
-def format_string(line: str, length=str_length) -> str:
+def format_string(line: str, length=STR_LENGTH) -> str:
     if len(line.split()) < 2:
         return line
 
     new_str = line.split()
-    while len(' '.join(new_str)) < length:
+    while len(SPACE_SYMBOL.join(new_str)) < length:
         for index in range(len(new_str) - 1):
-            if len(' '.join(new_str)) < length:
-                new_str[index] += ' '
+            if len(SPACE_SYMBOL.join(new_str)) < length:
+                new_str[index] += SPACE_SYMBOL
             else:
                 break
-    return ' '.join(new_str)
+    return SPACE_SYMBOL.join(new_str)
 
 
 def replacing_phrases(input_string: str) -> str:
@@ -86,14 +85,14 @@ def header(header_list: list, number: int) -> list:
     if re.search(r'^_+\s', header_list[2]):
         urgency = ''
     else:
-        urgency = indent + re.search(r'\w+\s?\w+', header_list[2]).group(0)
+        urgency = INDENT + re.search(r'\w+\s?\w+', header_list[2]).group(0)
 
     # Declassifying define
     declassify = re.split(r'\s{2,}', header_list[2])[1]
     list_item = ''
     if declassify == 'Confidencial':
         list_item = re.search(r'\(\w+\.\s?\d\.\d+(.*)\)$', header_list[3]).group(0)
-        list_item = space_symbol * (str_length - len(list_item)) + list_item
+        list_item = SPACE_SYMBOL * (STR_LENGTH - len(list_item)) + list_item
     elif declassify == 'For internal use':
         declassify = 'FIU'
 
@@ -116,7 +115,7 @@ def header(header_list: list, number: int) -> list:
     number_of_part = from_address[-4:]
     if check_status:
         dot_symbol = '.'
-    header_string = f'{from_address}{indent}NUM{dot_symbol}{space_symbol}{number}{indent}{declassify}{urgency}'
+    header_string = f'{from_address}{INDENT}NUM{dot_symbol}{SPACE_SYMBOL}{number}{INDENT}{declassify}{urgency}'
 
     return [header_string, list_item, number_of_part]
 
@@ -136,13 +135,13 @@ def address_where(recipient: list) -> list:
             for i in range(0, len(recipient), 2)
         ]
         for pair in pair_address:
-            city = pair[0].split()[1] + space_symbol * 3
+            city = pair[0].split()[1] + INDENT
             where = replacing_phrases(pair[1])
             surplus = ''
-            if len(city + where) > str_length:
+            if len(city + where) > STR_LENGTH:
                 surplus = where.split().pop()
-                where = ' '.join(where.split()[:-1])
-                surplus = space_symbol * len(city) + surplus
+                where = SPACE_SYMBOL.join(where.split()[:-1])
+                surplus = 1 * len(city) + surplus
 
             address_list.append(city + where)
             if surplus:
@@ -156,17 +155,17 @@ def address_where(recipient: list) -> list:
                 ]
                 from_string = addressee_string[0]
                 quantity_spaces = len(from_string) + 3
-                address_list.append(f'{from_string}{space_symbol * 3}{addressee_string[1]}')
+                address_list.append(f'{from_string}{INDENT}{addressee_string[1]}')
             elif 'г.' in string[:3] and re.search(r'\w{2,}\.', string):
                 addressee_string = [element.strip() for element in string[3:].split('. ')]
                 from_string = addressee_string[0]
                 quantity_spaces = len(from_string) + 3
-                address_list.append(f'{from_string}{space_symbol * 3}{addressee_string[1]}')
+                address_list.append(f'{from_string}{INDENT}{addressee_string[1]}')
             elif len(re.split(r'\s{3,}', string)) > 1:
                 for tab_string in re.split(r'\s{3,}', string):
-                    address_list.append(f'{space_symbol * quantity_spaces}{tab_string}')
+                    address_list.append(f'{1 * quantity_spaces}{tab_string}')
             else:
-                address_list.append(f'{space_symbol * quantity_spaces}{string}')
+                address_list.append(f'{1 * quantity_spaces}{string}')
 
     return address_list
 
@@ -179,21 +178,21 @@ def main_text(file_part: list) -> list:
         start = 0
 
         for position, _ in enumerate(words_list):
-            line = ' '.join(words_list[start:position])
-            short_line = ' '.join(words_list[start:position - 1])
-            end_line = ' '.join(words_list[start:])
+            line = SPACE_SYMBOL.join(words_list[start:position])
+            short_line = SPACE_SYMBOL.join(words_list[start:position - 1])
+            end_line = SPACE_SYMBOL.join(words_list[start:])
 
-            if start == 0 and len(line) > str_length - 4:
+            if start == 0 and len(line) > STR_LENGTH - 4:
                 str_list.append(
-                    '    ' + format_string(short_line, length=str_length - 4)
+                    PARAGRAPH_INDENT + format_string(short_line, length=STR_LENGTH - 4)
                 )
                 start = position - 1
-            elif len(line) > str_length:
+            elif len(line) > STR_LENGTH:
                 str_list.append(format_string(short_line))
                 start = position - 1
-            elif position == len(words_list) - 1 and len(end_line) <= str_length:
+            elif position == len(words_list) - 1 and len(end_line) <= STR_LENGTH:
                 str_list.append(end_line)
-            elif position == len(words_list) - 1 and len(end_line) > str_length:
+            elif position == len(words_list) - 1 and len(end_line) > STR_LENGTH:
                 str_list.append(format_string(line))
                 str_list.append(words_list[-1])
 
@@ -203,17 +202,16 @@ def main_text(file_part: list) -> list:
 def footer(file_line: list, number: int, number_of_part: str) -> list:
     final_result = list()
     check_symbol = ''
-    # number_of_part = re.search(r'\d+$', file_line[1]).group(0)
     today = datetime.date.today().strftime("%d.%m.%Y")
     if check_status:
         check_symbol = '/P'
-    prefix = f'NUM {number_of_part}/{number}{check_symbol}{space_symbol*3}'
+    prefix = f'NUM {number_of_part}/{number}{check_symbol}{INDENT}'
     final_result.append(f'{prefix}{file_line[0]}')
-    final_result.append(f'{space_symbol * len(prefix)}{file_line[1]}')
+    final_result.append(f'{SPACE_SYMBOL * len(prefix)}{file_line[1]}')
     rank, name, sub_name = file_line[2].split()
-    left_part = f'{today}{space_symbol * (len(prefix) - len(today))}{rank}'
-    names = name + ' ' + sub_name
-    space_string = space_symbol * (len(prefix + file_line[0]) - len(left_part + names))
+    left_part = f'{today}{SPACE_SYMBOL * (len(prefix) - len(today))}{rank}'
+    names = name + SPACE_SYMBOL + sub_name
+    space_string = SPACE_SYMBOL * (len(prefix + file_line[0]) - len(left_part + names))
     final_result.append(f'{left_part}{space_string}{names}')
 
     return final_result
