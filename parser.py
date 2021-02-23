@@ -169,9 +169,9 @@ def main_text(file_part: list) -> list:
             short_line = SPACE_SYMBOL.join(words_list[start:position - 1])
             end_line = SPACE_SYMBOL.join(words_list[start:])
 
-            if start == 0 and len(line) > STR_LENGTH - 4:
+            if start == 0 and len(line) > STR_LENGTH - PARAGRAPH_LEN:
                 str_list.append(
-                    PARAGRAPH_INDENT + format_string(short_line, length=STR_LENGTH - 4)
+                    PARAGRAPH_INDENT + format_string(short_line, length=STR_LENGTH - PARAGRAPH_LEN)
                 )
                 start = position - 1
             elif len(line) > STR_LENGTH:
